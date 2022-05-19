@@ -19,7 +19,7 @@ def inpaint_key_points(img_path, key_points, gray=True):
   save_name = f'inpainted_{"gray_" if gray else ""}{basename}.png'
   save_path = os.path.join(config.INPAINTED_FOLDER, save_name)
 
-  if False and os.path.exists(save_path):
+  if os.path.exists(save_path):
     inpainted = cv.imread(save_path)
   else:
     inpainted = cv.inpaint(img, mask, 3, cv.INPAINT_TELEA)

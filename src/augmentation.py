@@ -28,7 +28,7 @@ class Augmentation():
         self._height_margin = height_margin
 
         if decrease_rate_range is None:
-            self._decrease_rate_range = np.arange(0.4, 0.6, 0.1)
+            self._decrease_rate_range = np.arange(0.4, 0.9, 0.1)
         if angles_range is None:
             self._angles_range = np.radians(np.arange(0, 91))
 
@@ -104,8 +104,8 @@ class Augmentation():
         initial_grid += self.rectangle_center
         self._initial_grid = utils.rint(initial_grid)
 
-        assert np.all(0 <= initial_grid[0]) and np.all(initial_grid[0] < document_width) and \
-               np.all(0 <= initial_grid[1]) and np.all(initial_grid[1] < document_height), f"""
+        assert np.all(0 <= initial_grid[:, 0]) and np.all(initial_grid[:, 0] < document_width) and \
+               np.all(0 <= initial_grid[:, 1]) and np.all(initial_grid[:, 1] < document_height), f"""
         decrease_rate = {self.decrease_rate}, 
         rotation_angle = {self.rotation_angle}, 
         rectangle_center={self.rectangle_center}"""

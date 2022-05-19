@@ -100,7 +100,7 @@ def detect_markers(img_path):
   basename = utils.get_file_name(img_path)
   save_path = os.path.join(config.KEY_POINTS_FOLDER, basename + '.pickle')
   
-  if False and os.path.exists(save_path):
+  if os.path.exists(save_path):
     circle_key_points = utils.load_key_points(save_path)
   else:
     img = cv.imread(img_path)
