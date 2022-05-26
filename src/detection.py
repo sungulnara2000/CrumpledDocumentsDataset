@@ -73,11 +73,23 @@ def find_biggest_contour(image):
 
   kernel = np.ones((7,7), np.uint8)
   closing = cv.morphologyEx(edges, cv.MORPH_CLOSE, kernel)
+  closing = cv.GaussianBlur(closing, (7, 7), 0)
+
 
   contours = cv.findContours(closing, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
   contours = contours[0] if len(contours) == 2 else contours[1]
 
   big_contour = max(contours, key=cv.contourArea)
+
+  # make biggest contour slightly smaller
+  img_contour = np.zeros(image.shape[:2], dtype='uint8')
+  cv.drawContours(img_contour, [big_contour], -1, (255), -1)
+  cv.drawContours(img_contour, [big_contour], -1, (0), 10)
+
+  contours_helper = cv.findContours(img_contour, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+  contours_helper = contours_helper[0] if len(contours_helper) == 2 else contours_helper[1]
+
+  big_contour = max(contours_helper, key=cv.contourArea)
 
   return big_contour, contours
 
