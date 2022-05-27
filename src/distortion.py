@@ -18,16 +18,14 @@ class Distortion:
         :param output_size: tuple, (width, height) of result image
         :param gray_illumination: whether to use gray or colored illumination
         """
+        self.paper_contour = None
+
         self.input_size = input_size
         self.output_size = output_size
         self.crumpled_grid_image = cv.imread(crumpled_grid_path)
 
         self.key_points = detection.detect_markers(crumpled_grid_path)
         self.ordered_key_points = ordering.order_markers(self.key_points)
-
-        big_contour, _ = detection.find_biggest_contour(self.crumpled_grid_image)
-        self.paper_contour = np.zeros(self.crumpled_grid_image.shape)
-        self.paper_contour = cv.drawContours(self.paper_contour, [big_contour], 0, (1, 1, 1), -1)
 
         self.inpainted = inpainting.inpaint_key_points(crumpled_grid_path, self.key_points, gray=gray_illumination)
         if len(self.inpainted.shape) == 2:
@@ -54,7 +52,7 @@ class Distortion:
     def __crumple(self, document_image):
         output_width, output_height = self.output_size
 
-        transformed_document = np.full((output_height, output_width, 3), 255, dtype=np.uint8)
+        transformed_document = np.full((output_height, output_width, 3), 0, dtype=np.uint8)
         transformed_document[self.interpolated[:, :, 1], self.interpolated[:, :, 0], :] = document_image
 
         return transformed_document
@@ -87,7 +85,22 @@ class Distortion:
 
         self.interpolated = interpolated
 
+    def __find_paper_contour(self, transformed):
+        if self.paper_contour is None:
+          transformed_gray = cv.cvtColor(transformed, cv.COLOR_BGR2GRAY)
+          # transformed_gray = cv.GaussianBlur(transformed_gray, (13, 13), 0)
+
+          contours = cv.findContours(transformed_gray, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+          contours = contours[0] if len(contours) == 2 else contours[1]
+
+          big_contour = max(contours, key=cv.contourArea)
+
+          self.paper_contour = np.zeros(self.crumpled_grid_image.shape)
+          self.paper_contour = cv.drawContours(self.paper_contour, [big_contour], 0, (1, 1, 1), -1)
+
     def __add_illumination(self, transformed_document):
+        self.__find_paper_contour(transformed_document)
+
         output_width, output_height = self.output_size
 
         illumination = self.inpainted * self.paper_contour
@@ -104,6 +117,8 @@ class Distortion:
         return transformed_document_w_illumination
 
     def __add_background(self, transformed_document, background_image):
+        self.__find_paper_contour(transformed_document)
+
         output_width, output_height = self.output_size
 
         paper_contour = cv.resize(self.paper_contour, (output_width, output_height))
