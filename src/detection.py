@@ -60,7 +60,7 @@ def delete_similar_key_points(kp, iou_threshold):
   return new_kp, indices
 
 
-def make_template_circle(size=32):
+def make_template_circle(size=60):
   reference_circle = np.full((size, size), 255, np.uint8)
   reference_circle = cv.circle(reference_circle, 
                               utils.rint((size/2, size/2)), 
@@ -68,20 +68,39 @@ def make_template_circle(size=32):
                               color=(0, 0, 0), 
                               thickness=-1)
   
-  surf = cv.xfeatures2d.SURF_create(hessianThreshold=700, nOctaves=2, nOctaveLayers=2, upright=False)
+  surf = cv.xfeatures2d.SURF_create(hessianThreshold=200, nOctaves=2, nOctaveLayers=2, upright=False)
   reference_circle_kp, reference_circle_des = surf.detectAndCompute(reference_circle, None)
 
   return reference_circle_des
   
+def find_biggest_contour(image):
+  """
+  returns: biggest contour and all contours
+  """
+  img_gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+  img_blur = cv.GaussianBlur(img_gray, (13, 13), 0)
 
-def detect_markers(img_path):
+  edges = feature.canny(img_blur, sigma=0.5)
+  edges = edges.astype('uint8') * 255
+
+  kernel = np.ones((7,7), np.uint8)
+  closing = cv.morphologyEx(edges, cv.MORPH_CLOSE, kernel)
+
+  contours = cv.findContours(closing, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+  contours = contours[0] if len(contours) == 2 else contours[1]
+
+  big_contour = max(contours, key=cv.contourArea)
+
+  return big_contour, contours
+
+def detect_markers(img_path, overwrite=False, size_limits=(0.5, 1.5)):
   basename = utils.get_file_name(img_path)
   save_path = os.path.join(config.KEY_POINTS_FOLDER, basename + '.pickle')
   
-  if os.path.exists(save_path):
+  if not overwrite and os.path.exists(save_path):
     circle_key_points = utils.load_key_points(save_path)
   else:
-    img = cv.imread(img_path)
+    img = utils.read_crumpled_image(img_path)
     img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     img_blur = cv.GaussianBlur(img_gray, (15, 15), 0)
 
@@ -94,8 +113,16 @@ def detect_markers(img_path):
     reference_circle_des = make_template_circle()
     circle_kp_des = sorted(list(zip(strongest_key_points, strongest_descriptors)), 
                           key=lambda x: np.linalg.norm(x[1] - reference_circle_des))
-    circle_key_points = [x[0] for x in circle_kp_des][:config.N_COLS * config.N_ROWS]
+    circle_key_points = [x[0] for x in circle_kp_des]
+    circle_key_points_sizes = np.array([x.size for x in circle_key_points])
+    
+    indices = np.where(
+    (circle_key_points_sizes / circle_key_points_sizes[0] > size_limits[0]) & 
+    (circle_key_points_sizes / circle_key_points_sizes[0] < size_limits[1]))[0]
 
+    circle_key_points = [circle_key_points[i] for i in indices]
+    circle_key_points = circle_key_points[:config.N_COLS * config.N_ROWS]
+    
     utils.save_key_points(save_path, circle_key_points)
 
   return circle_key_points

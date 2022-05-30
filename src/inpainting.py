@@ -5,7 +5,7 @@ import cv2 as cv
 from src import config, utils
 
 
-def inpaint_key_points(img_path, key_points, gray=True):
+def inpaint_key_points(img_path, key_points, gray=True, overwrite=False):
   basename = utils.get_file_name(img_path)
   img = cv.imread(img_path)
 
@@ -16,13 +16,16 @@ def inpaint_key_points(img_path, key_points, gray=True):
   for kp in key_points:
     mask = cv.circle(mask, utils.rint(kp.pt), utils.rint(kp.size / 2), (255), -1)
 
-  save_name = f'inpainted_{"gray_" if gray else ""}{basename}.png'
+  mask = cv.bitwise_not(mask)
+
+  save_name = f'inpainted_fsrfast_{"gray_" if gray else ""}{basename}.png'
   save_path = os.path.join(config.INPAINTED_FOLDER, save_name)
 
-  if os.path.exists(save_path):
+  if not overwrite and os.path.exists(save_path):
     inpainted = cv.imread(save_path)
   else:
-    inpainted = cv.inpaint(img, mask, 3, cv.INPAINT_TELEA)
+    inpainted = img.copy()
+    cv.xphoto.inpaint(img, mask, inpainted, cv.xphoto.INPAINT_FSR_FAST)
     cv.imwrite(save_path, inpainted)
 
 
