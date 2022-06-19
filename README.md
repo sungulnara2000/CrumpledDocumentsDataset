@@ -1,9 +1,9 @@
 # CrumpledDocumentsDataset
 
-<p align="center">
+<p align="left">
   <img 
-    width="400"
-    height="533"
+    width="300"
+    height="424"
     src="https://github.com/sungulnara2000/CrumpledDocumentsDataset/blob/master/materials/docs_demo.gif"
   >
 </p>
